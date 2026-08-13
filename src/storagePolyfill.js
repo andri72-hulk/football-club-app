@@ -1,43 +1,94 @@
 // Ricrea l'API window.storage usata dall'app (originariamente fornita dall'ambiente
-// artifact di Claude) appoggiandosi al localStorage del browser.
-// Nota: qui non esiste più il concetto di dato "condiviso" tra più utenti (shared=true):
-// il localStorage è sempre e solo locale al browser/dispositivo su cui gira l'app.
-// Il prefisso distingue comunque i dati "personali" da quelli "condivisi" per compatibilità,
+// artifact di Claude) appoggiandosi a IndexedDB del browser invece che a localStorage.
+//
+// Perché IndexedDB e non localStorage: localStorage accetta in genere solo 5-10 MB
+// totali per sito, un limite facile da superare quando l'app salva foto giocatori,
+// immagini degli esercizi e documenti del Dossier (tutti codificati come testo).
+// IndexedDB non ha questo limite stretto (in pratica centinaia di MB o più, a
+// seconda dello spazio libero sul dispositivo), quindi è la scelta corretta per
+// un'app che conserva file multimediali insieme ai dati.
+//
+// Nota: non esiste più il concetto di dato "condiviso" tra più utenti (shared=true):
+// il browser è sempre e solo locale al dispositivo su cui gira l'app. Il prefisso
+// distingue comunque i dati "personali" da quelli "condivisi" per compatibilità,
 // ma entrambi restano salvati nello stesso browser.
 
-function prefixedKey(key, shared) {
+const DB_NAME = "football-club-db";
+const STORE_NAME = "kv";
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    if (typeof indexedDB === "undefined") {
+      reject(new Error("IndexedDB non disponibile in questo browser"));
+      return;
+    }
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = () => {
+      if (!req.result.objectStoreNames.contains(STORE_NAME)) {
+        req.result.createObjectStore(STORE_NAME);
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error || new Error("Impossibile aprire il database locale"));
+  });
+}
+
+function fullKey(key, shared) {
   return `${shared ? "shared" : "personal"}::${key}`;
 }
 
 const storagePolyfill = {
   async get(key, shared = false) {
-    const raw = localStorage.getItem(prefixedKey(key, shared));
-    if (raw === null) {
-      throw new Error(`Storage key not found: ${key}`);
-    }
-    return { key, value: raw, shared: !!shared };
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, "readonly");
+      const req = tx.objectStore(STORE_NAME).get(fullKey(key, shared));
+      req.onsuccess = () => {
+        if (req.result === undefined) {
+          reject(new Error(`Storage key not found: ${key}`));
+        } else {
+          resolve({ key, value: req.result, shared: !!shared });
+        }
+      };
+      req.onerror = () => reject(req.error || new Error("Lettura fallita"));
+    });
   },
 
   async set(key, value, shared = false) {
-    try {
-      localStorage.setItem(prefixedKey(key, shared), value);
-      return { key, value, shared: !!shared };
-    } catch (e) {
-      throw new Error("Storage set failed: " + (e?.message || "quota exceeded"));
-    }
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, "readwrite");
+      tx.objectStore(STORE_NAME).put(value, fullKey(key, shared));
+      tx.oncomplete = () => resolve({ key, value, shared: !!shared });
+      tx.onerror = () => reject(new Error("Storage set failed: " + (tx.error?.message || "errore sconosciuto")));
+    });
   },
 
   async delete(key, shared = false) {
-    localStorage.removeItem(prefixedKey(key, shared));
-    return { key, deleted: true, shared: !!shared };
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, "readwrite");
+      tx.objectStore(STORE_NAME).delete(fullKey(key, shared));
+      tx.oncomplete = () => resolve({ key, deleted: true, shared: !!shared });
+      tx.onerror = () => reject(tx.error || new Error("Eliminazione fallita"));
+    });
   },
 
   async list(prefix = "", shared = false) {
-    const fullPrefix = prefixedKey(prefix, shared);
-    const keys = Object.keys(localStorage)
-      .filter((k) => k.startsWith(fullPrefix))
-      .map((k) => k.slice(shared ? "shared::".length : "personal::".length));
-    return { keys, prefix, shared: !!shared };
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, "readonly");
+      const req = tx.objectStore(STORE_NAME).getAllKeys();
+      req.onsuccess = () => {
+        const fp = fullKey(prefix, shared);
+        const stripLen = (shared ? "shared::" : "personal::").length;
+        const keys = req.result
+          .filter((k) => typeof k === "string" && k.startsWith(fp))
+          .map((k) => k.slice(stripLen));
+        resolve({ keys, prefix, shared: !!shared });
+      };
+      req.onerror = () => reject(req.error || new Error("Elenco chiavi fallito"));
+    });
   },
 };
 
