@@ -1,4 +1,4 @@
-# Football Club Manager — Progetto Vite
+# Football Club Manager — Progetto Mister
 
 Questo è il progetto scaricabile della tua app di gestione società calcistica,
 pronto per essere pubblicato su un hosting reale (fuori dall'artifact di Claude).
