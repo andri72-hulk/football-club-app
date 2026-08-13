@@ -1472,6 +1472,7 @@ export default function FootballClubApp() {
           const res = await window.storage.get(STORAGE_KEY, shared);
           data = res?.value ? JSON.parse(res.value) : null;
         } catch (e) {
+          console.warn("Nessun dato salvato trovato al caricamento (normale al primo avvio):", e?.message);
           data = null;
         }
 
@@ -1523,6 +1524,7 @@ export default function FootballClubApp() {
         }
       }
       if (lastError) {
+        console.error("Salvataggio fallito dopo 3 tentativi:", lastError);
         setStorageHealthy((wasHealthy) => {
           if (wasHealthy) {
             const detail = lastError?.message ? `: ${lastError.message}` : "";
