@@ -49,8 +49,8 @@ const ATTENDANCE_COLORS = {
 };
 
 const EXERCISE_TYPE_STYLES = {
-  "Attivazione": "bg-amber-500/15 text-amber-400 border-amber-500/30",
-  "Tecnica": "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
+  "Attivazione": "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
+  "Tecnica": "bg-yellow-500/15 text-yellow-400 border-yellow-500/30",
   "Tattica": "bg-sky-500/15 text-sky-400 border-sky-500/30",
   "Coordinazione": "bg-purple-500/15 text-purple-400 border-purple-500/30",
   "Decision-Making": "bg-pink-500/15 text-pink-400 border-pink-500/30",
@@ -1472,7 +1472,6 @@ export default function FootballClubApp() {
           const res = await window.storage.get(STORAGE_KEY, shared);
           data = res?.value ? JSON.parse(res.value) : null;
         } catch (e) {
-          console.warn("Nessun dato salvato trovato al caricamento (normale al primo avvio):", e?.message);
           data = null;
         }
 
@@ -1524,7 +1523,6 @@ export default function FootballClubApp() {
         }
       }
       if (lastError) {
-        console.error("Salvataggio fallito dopo 3 tentativi:", lastError);
         setStorageHealthy((wasHealthy) => {
           if (wasHealthy) {
             const detail = lastError?.message ? `: ${lastError.message}` : "";
