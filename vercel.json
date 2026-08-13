@@ -3,19 +3,17 @@
     {
       "source": "/index.html",
       "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-cache, no-store, must-revalidate"
-        }
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
+        { "key": "CDN-Cache-Control", "value": "no-cache, no-store, must-revalidate" },
+        { "key": "Vercel-CDN-Cache-Control", "value": "no-cache, no-store, must-revalidate" }
       ]
     },
     {
       "source": "/",
       "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-cache, no-store, must-revalidate"
-        }
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
+        { "key": "CDN-Cache-Control", "value": "no-cache, no-store, must-revalidate" },
+        { "key": "Vercel-CDN-Cache-Control", "value": "no-cache, no-store, must-revalidate" }
       ]
     }
   ]
